@@ -1,27 +1,287 @@
 import pygame
+# Import random for random numbers
+import random
+import pygame.locals
+import time
 pygame.init()
 
+
+class Goal:
+   def __init__(self, color, x, y, width, height):
+       self.color = color
+       self.x = x
+       self.y = y
+       self.width = width
+       self.height = height
+
+
+class Board:
+   def __init__(self, boxL, boxH):
+       self.boxL = boxL
+       self.boxH = boxH
+
+   def draw(self, screen):
+       self.screen = screen
+       image = pygame.image.load("SOMETHING")
+       image.blit(screen, (self.boxL, self.boxH))
+
+
+class Enemy:
+   def __init__(self, color, x, y, width, height, vel):
+       self.color = color
+       self.x = x
+       self.y = y
+       self.width = width
+       self.height = height
+       self.vel = vel
+       self.direction = random.randint(1, 4)
+       self.lastDirectionChange = pygame.time.get_ticks()
+       self.ChangeFrequency = 500
+
+   def move(self):
+       if pygame.time.get_ticks() >= self.lastDirectionChange + self.ChangeFrequency:
+           self.direction = random.randint(1, 4)
+           self.lastDirectionChange = pygame.time.get_ticks()
+       if self.direction == 1:
+           self.x += self.vel  # Right
+           if self.x > screen.boxL - self.width:
+               self.x = screen.boxL - self.width
+       if self.direction == 2:
+           self.y += self.vel  # Down
+           if self.y > screen.boxH - self.height:
+               self.y = screen.boxH - self.height
+       if self.direction == 3:
+           self.x -= self.vel  # Left
+           if self.x < 0:
+               self.x = 0
+       if self.direction == 4:
+           self.y -= self.vel  # Up
+           if self.y < 0:
+               self.y = 0
+
+
+class Player:
+   def __init__(self, color, x, y, width, height, vel, jumplength, jumpdowntime, lives, hitdowntime, GoalCollision):
+       self.color = color
+       self.x = x
+       self.y = y
+       self.width = width
+       self.height = height
+       self.vel = vel
+       self.jump = False
+       self.run = True
+       self.jumplength = jumplength
+       self.jumpdowntime = jumpdowntime
+       self.starttime = 0
+       self.lives = lives
+       self.hitdowntime = hitdowntime
+       self.hit = False
+       self.GoalCollision = False
+
+   def move(self, key_strokes):
+       if keys[pygame.K_a]:
+           self.x -= self.vel  # Left
+           if self.x < 0:
+               self.x = 0
+
+       if keys[pygame.K_d]:
+           self.x += self.vel  # Right
+           if self.x > screen.boxL - self.width:
+               self.x = screen.boxL - self.width
+
+       if keys[pygame.K_w]:  # Up
+           self.y -= self.vel
+           if self.y < 0:
+               self.y = 0
+
+       if keys[pygame.K_s]:
+           self.y += self.vel  # Down
+           if self.y > screen.boxH - self.height:
+               self.y = screen.boxH - self.height
+
+       if keys[pygame.K_SPACE] and keys[pygame.K_w]:
+           if self.jump is False and keys[pygame.K_SPACE] and keys[pygame.K_w]:
+               self.starttime = pygame.time.get_ticks()
+               self.y -= self.jumplength
+               self.jump = True
+               if self.y < 0:
+                   self.y = 0
+
+       if keys[pygame.K_SPACE] and keys[pygame.K_d]:
+           if self.jump is False and keys[pygame.K_SPACE] and keys[pygame.K_d]:
+               self.starttime = pygame.time.get_ticks()
+               self.x += self.jumplength
+               self.jump = True
+               if self.x > screen.boxL - self.width:
+                   self.x = screen.boxL - self.width
+
+       if keys[pygame.K_SPACE] and keys[pygame.K_a] and self.x > 0:
+           if self.jump is False and keys[pygame.K_SPACE] and keys[pygame.K_a]:
+               self.starttime = pygame.time.get_ticks()
+               self.x -= self.jumplength
+               self.jump = True
+               if self.x < 0:
+                   self.x = 0
+
+       if keys[pygame.K_SPACE] and keys[pygame.K_s]:
+           if self.jump is False and keys[pygame.K_SPACE] and keys[pygame.K_s]:
+               self.starttime = pygame.time.get_ticks()
+               self.y += self.jumplength
+               self.jump = True
+               if self.y > screen.boxH - self.height:
+                   self.y = screen.boxH - self.height
+
+       if self.jump == True and pygame.time.get_ticks() - self.starttime >= self.jumpdowntime:
+           self.jump = False
+
+   def collisionG(self, goal):
+       x_collision = False
+       y_collision = False
+       if (self.x <= goal.x <= self.x + self.width) or (goal.x <= self.x <= goal.x + goal.width):
+           x_collision = True
+       if (self.y <= goal.y <= self.y + self.height) or (goal.y <= self.y <= goal.y + goal.height):
+           y_collision = True
+       if x_collision is True and y_collision is True:
+           self.color = (255, 255, 255)
+           self.GoalCollision = True
+
+   def collisionE(self, enemy):
+       x_collision = False
+       y_collision = False
+       if (self.x <= enemy.x <= self.x + self.width) or (enemy.x <= self.x <= enemy.x + enemy.width):
+           x_collision = True
+       if (self.y <= enemy.y <= self.y + self.height) or (enemy.y <= self.y <= enemy.y + enemy.height):
+           y_collision = True
+       if x_collision is True and y_collision is True and self.hit is False:
+           self.starttime = pygame.time.get_ticks()
+           self.lives -= 1
+           self.hit = True
+
+       if self.hit is True:
+           self.color = (255, 0, 255)
+
+       if self.hit is True and pygame.time.get_ticks() - self.starttime >= self.hitdowntime:
+           self.hit = False
+           self.color = (255, 0, 0)
+
+
+pygame.display.set_caption("Road to heaven")
+
+screen = Board(1000, 600)
+win = pygame.display.set_mode((screen.boxL, screen.boxH))
+player = Player((255, 0, 0), 0, 0, 35, 80, 2, 150, 200, 3, 1000, False)
+enemies = []
+currentEnemy = 0
+enemiesInGame = 4
+goal = Goal((0, 0, 255), screen.boxL-player.width, screen.boxH-player.height, player.width, player.height)
+comicsansms60 = pygame.font.SysFont("comicsansms", 50)
+comicsansms40 = pygame.font.SysFont("comicsansms", 30)
+
+while currentEnemy < enemiesInGame:
+   randomX = random.randint(0, 1000 - 35)  # minus 35 for et dele af enemies ikke er udover kanten
+   randomY = random.randint(0, 600 - 35)
+   if randomX <= 200 and randomY <= 200:
+       pass
+   else:
+       enemy = Enemy((0, 255, 0), randomX, randomY, 35, 35, 0.2)
+       enemies.append(enemy)
+       currentEnemy += 1
+
+while player.run:
+   pygame.time.delay(0)
+
+   for event in pygame.event.get():
+       if event.type == pygame.QUIT:
+           player.run = False
+
+   keys = pygame.key.get_pressed()
+
+   player.move(keys)
+   for EachEnemy in enemies:
+       EachEnemy.move()
+
+   for EachEnemy in enemies:
+       player.collisionE(EachEnemy)
+
+   player.collisionG(goal)
+
+   # Draw screen
+   win.fill((0, 0, 0,))
+   pygame.draw.rect(win, player.color, (player.x, player.y, player.width, player.height))
+   for EachEnemy in enemies:
+       pygame.draw.rect(win, EachEnemy.color, (EachEnemy.x, EachEnemy.y, EachEnemy.width, EachEnemy.height))
+   pygame.draw.rect(win, goal.color, (goal.x, goal.y, goal.width, goal.height))
+   if player.lives <= 0:
+       TekstLost = comicsansms60.render("You lost", 1, (255, 255, 0))
+       win.blit(TekstLost, (400, 250))
+       player.run = False
+   if player.GoalCollision is True:
+       TekstWin = comicsansms60.render("You Win", 1, (255, 255, 0))
+       win.blit(TekstWin, (400, 250))
+   TekstLives = comicsansms40.render("Lives: " + str(player.lives), 1, (255, 255, 0))
+   win.blit(TekstLives, (10, 5))
+
+   pygame.display.update()
+
+   if player.run is False:
+       time.sleep(5)
+
+pygame.quit()
+
+
+import pygame
+pygame.init()
+
+walkRight = [pygame.image.load('R1.png'), pygame.image.load('R2.png'), pygame.image.load('R3.png'), pygame.image.load('R4.png'), pygame.image.load('R5.png'), pygame.image.load('R6.png'), pygame.image.load('R7.png'), pygame.image.load('R8.png'), pygame.image.load('R9.png')]
+walkLeft = [pygame.image.load('L1.png'), pygame.image.load('L2.png'), pygame.image.load('L3.png'), pygame.image.load('L4.png'), pygame.image.load('L5.png'), pygame.image.load('L6.png'), pygame.image.load('L7.png'), pygame.image.load('L8.png'), pygame.image.load('L9.png')]
+bg = pygame.image.load('bg.jpg')
+char = pygame.image.load('standing.png')
+
+clock = pygame.time.clock()
+
+def redrawgamewindow () :
+   global walkcount
+
+   win.blit(bg, (0,0))
+
+   if walkcount + 1 >= 27 :
+       walkcount = 0
+   if left:
+       win.blit (walkleft[walkcount//3], (x,y))
+       walkcount += 1
+   elif right:
+       win.blit(walkright[walkcount//3], (x,y))
+       walkcount += 1
+   else:
+       win.blit(char, (x,y))
+
+   pygame.display.update()
+
 class board():
-    def __init__(self, boxL, boxH):
-        self.boxL = boxL
-        self.boxH = boxH
-    def draw(self,screen):
-        self.screen = screen
-        image = pygame.image.load("SOMETHING")
-        image.blit(screen,(self.boxL,self.boxH))
+   def __init__(self, boxL, boxH):
+       self.boxL = boxL
+       self.boxH = boxH
+   def draw(self,screen):
+       self.screen = screen
+       image = pygame.image.load("SOMETHING")
+       image.blit(screen,(self.boxL,self.boxH))
 
 class spiller():
-    def __init__(self, color, x, y, width, height, vel, jumplength, jumpdowntime):
-        self.color = color
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-        self.vel = vel
-        self.jump = False
-        self.run = True
-        self.jumplength = jumplength
-        self.jumpdowntime = jumpdowntime
+   def __init__(self, color, x, y, width, height, vel, jumplength, jumpdowntime):
+       self.color = color
+       self.x = x
+       self.y = y
+       self.width = width
+       self.height = height
+       self.vel = vel
+       self.jump = False
+       self.run = True
+       self.jumplength = jumplength
+       self.jumpdowntime = jumptimedown
+       self.left = False
+       self.right = False
+       self.walkcount = 0
+
 
 pygame.display.set_caption("Road to heaven")
 
@@ -31,65 +291,74 @@ screen = board(1000, 600)
 win = pygame.display.set_mode((screen.boxL, screen.boxH))
 
 while Player.run:
-    pygame.time.delay(0)
+   clock.tick(27)
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame = False
+   for event in pygame.event.get():
+       if event.type == pygame.QUIT:
+           pygame = False
 
-    keys = pygame.key.get_pressed()
+   keys = pygame.key.get_pressed()
 
-    if keys[pygame.K_a] and Player.x > 0:
-        Player.x -= Player.vel
+   if keys[pygame.K_a] and Player.x > 0:
+       Player.x -= Player.vel
+       left = True
+       right = False
 
-    if keys[pygame.K_d]and Player.x < screen.boxL - (Player.width):
-        Player.x += Player.vel
+   if keys[pygame.K_d]and Player.x < screen.boxL - (Player.width):
+       Player.x += Player.vel
+       left = False
+       right = True
 
-    if keys[pygame.K_w]and Player.y > 0:
-        Player.y -= Player.vel
+   if keys[pygame.K_w]and Player.y > 0:
+       Player.y -= Player.vel
+       right = True
+       Left = False
 
-    if keys[pygame.K_s] and Player.y < screen.boxH - (Player.height):
-        Player.y += Player.vel
+   if keys[pygame.K_s] and Player.y < screen.boxH - (Player.height):
+       Player.y += Player.vel
+       right = False
+       left = True
 
-    if keys[pygame.K_SPACE] and keys[pygame.K_w]:
-        if Player.jump == False and keys[pygame.K_SPACE] and keys[pygame.K_w]:
-            starttime = pygame.time.get_ticks()
-            Player.y -= Player.jumplength
-            Player.jump = True
-            if Player.y < 0:
-                Player.y = 0
+   if keys[pygame.K_SPACE] and keys[pygame.K_w]:
+       if Player.jump == False and keys[pygame.K_SPACE] and keys[pygame.K_w]:
+           starttime = pygame.time.get_ticks()
+           Player.y -= Player.jumplength
+           Player.jump = True
+           if Player.y < 0:
+               Player.y = 0
 
 
-    if keys[pygame.K_SPACE] and keys[pygame.K_d]:
-        if Player.jump == False and keys[pygame.K_SPACE] and keys[pygame.K_d]:
-            starttime = pygame.time.get_ticks()
-            Player.x += Player.jumplength
-            Player.jump = True
-            if Player.x > screen.boxL-Player.width:
-                Player.x = screen.boxL-Player.width
+   if keys[pygame.K_SPACE] and keys[pygame.K_d]:
+       if Player.jump == False and keys[pygame.K_SPACE] and keys[pygame.K_d]:
+           starttime = pygame.time.get_ticks()
+           Player.x += Player.jumplength
+           Player.jump = True
+           if Player.x > screen.boxL-Player.width:
+               Player.x = screen.boxL-Player.width
 
-    if keys[pygame.K_SPACE]and keys[pygame.K_a]and Player.x > 0:
-        if Player.jump == False and keys[pygame.K_SPACE] and keys[pygame.K_a]:
-            starttime = pygame.time.get_ticks()
-            Player.x -= Player.jumplength
-            Player.jump = True
-            if Player.x < 0:
-                Player.x = 0
+   if keys[pygame.K_SPACE]and keys[pygame.K_a]and Player.x > 0:
+       if Player.jump == False and keys[pygame.K_SPACE] and keys[pygame.K_a]:
+           starttime = pygame.time.get_ticks()
+           Player.x -= Player.jumplength
+           Player.jump = True
+           if Player.x < 0:
+               Player.x = 0
 
-    if keys[pygame.K_SPACE]and keys[pygame.K_s]:
-        if Player.jump == False and keys[pygame.K_SPACE] and keys[pygame.K_s]:
-            starttime = pygame.time.get_ticks()
-            Player.y += Player.jumplength
-            Player.jump = True
-            if Player.y > screen.boxH-Player.height:
-                Player.y = screen.boxH-Player.height
+   if keys[pygame.K_SPACE]and keys[pygame.K_s]:
+       if Player.jump == False and keys[pygame.K_SPACE] and keys[pygame.K_s]:
+           starttime = pygame.time.get_ticks()
+           Player.y += Player.jumplength
+           Player.jump = True
+           if Player.y > screen.boxH-Player.height:
+               Player.y = screen.boxH-Player.height
 
-    if Player.jump == True and pygame.time.get_ticks() - starttime >= Player.jumpdowntime:
-        Player.jump = False
+   if Player.jump == True and pygame.time.get_ticks() - starttime >= Player.jumpdowntime:
+       Player.jump = False
 
-    win.fill((0, 0, 0,))
-    pygame.draw.rect(win, Player.color, (Player.x, Player.y, Player.width, Player.height))
-    pygame.display.update()
+
+   redrawgamewindow()
+
+
 
 
 
